@@ -1,0 +1,67 @@
+#--- uv ---
+
+#忽略 uv 创建的默认虚拟环境目录
+
+#注意：不要忽略 uv.lock，它应该被提交！
+
+.venv/
+
+#--- Python General ---
+
+#字节码和缓存
+
+pycache/
+*.py[cod]
+*.pyo
+
+#C 语言扩展
+
+*.so
+
+#构建和分发产物
+
+build/
+dist/
+sdist/
+wheelhouse/
+*.egg-info/
+*.egg
+
+#--- 测试 ---
+
+.pytest_cache/
+.coverage
+htmlcov/
+nosetests.xml
+coverage.xml
+
+#--- 秘密与配置 ---
+
+#忽略本地环境变量文件
+
+.env
+*.env
+
+#--- IDE & Editor ---
+
+#JetBrains / PyCharm
+
+.idea/
+
+#VS Code (这是一个常见的折中方案，允许共享设置)
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+
+#--- OS Specific ---
+
+macOS
+
+.DS_Store
+
+Windows
+
+Thumbs.db
