@@ -3,9 +3,8 @@ import os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 import torch
-from src.audio import STFT
+from src.audio import STFT, load_audio_sf, save_audio_sf
 from src.bss import AUX_IVA_ISS
-import soundfile as sf
 
 
 class AUX_IVA_GRAPH(torch.nn.Module):
@@ -36,41 +35,20 @@ class AUX_IVA_GRAPH(torch.nn.Module):
         return sep
 
 
-def load_audio_sf(path, n_channels=None):
-    data, samplerate = sf.read(path, dtype="float32")
-    tensor = torch.from_numpy(data)
-
-    if tensor.ndim == 2:
-        tensor = tensor.t()  # [Channels, Time]
-
-    if n_channels is not None:
-        if tensor.shape[0] < n_channels:
-            raise ValueError(
-                f"Input audio has {tensor.shape[0]} channels, "
-                f"but {n_channels} were requested."
-            )
-        elif tensor.shape[0] > n_channels:
-            tensor = tensor[:n_channels, :]
-
-    return tensor, samplerate
-
-
-def save_audio_sf(path, tensor, samplerate):
-    data = tensor.cpu().numpy()
-    if data.ndim == 2:
-        data = data.T  # [Time, Channels]
-    sf.write(path, data, samplerate)
-
-
 if __name__ == "__main__":
     # For convenience, reuse the same mixture as ILRMA test if present
     mix_fname = "../train_high_snr.wav"
+
     mix, sr = load_audio_sf(mix_fname, n_channels=2)
+    print(f"Loaded {mix.shape[1] / sr:.2f} seconds of audio at {sr} Hz")
 
     model = AUX_IVA_GRAPH(n_iter=30, frame_shift=256, contrast_func="gaussian")
-    mix_out = model(mix)
 
     fname = mix_fname.split("/")[-1].split(".")[0]
     out_path = f"mix_out_iva_{fname}.wav"
     print(f"Saving output to {out_path}")
+
+    # Need to run model again to get output since profile returns dict
+    with torch.no_grad():
+        mix_out = model(mix)
     save_audio_sf(out_path, mix_out, sr)

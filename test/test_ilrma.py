@@ -5,9 +5,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from src.audio import STFT
+from src.audio import STFT, load_audio_sf, save_audio_sf
 from src.bss import ILRMA, ILRMA_V2
-import soundfile as sf
 
 class ILRMA_GRAPH(torch.nn.Module):
     """
@@ -35,47 +34,22 @@ class ILRMA_GRAPH(torch.nn.Module):
 
         return mix_out
 
-def load_audio_sf(path, n_channels=None):
-    # data is a numpy array, float64 or float32
-    # samplerate is an int
-    data, samplerate = sf.read(path, dtype='float32')
-
-    # Soundfile usually returns shape [Time, Channels]
-    # PyTorch typically uses [Batch, Channels, Time] or [Channels, Time] for signals
-    # We need to transpose here
-    tensor = torch.from_numpy(data)
-
-    if tensor.ndim == 2:
-        tensor = tensor.t() # transpose to [Channels, Time]
-
-    if n_channels is not None:
-        if tensor.shape[0] < n_channels:
-            raise ValueError(f"Input audio has {tensor.shape[0]} channels, but {n_channels} were requested.")
-        elif tensor.shape[0] > n_channels:
-            tensor = tensor[:n_channels, :]
-
-    return tensor, samplerate
-
-def save_audio_sf(path, tensor, samplerate):
-    # tensor shape [Channels, Time] or [Time]
-    data = tensor.cpu().numpy()
-
-    if data.ndim == 2:
-        data = data.T  # transpose to [Time, Channels]
-
-    sf.write(path, data, samplerate)
-
 if __name__ == "__main__":
     # mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
     # mix_fname = "../noise_test_2ch.wav"
     # mix_fname = "../train_low_snr.wav"
     mix_fname = "../train_high_snr.wav"
+
     mix, sr = load_audio_sf(mix_fname, n_channels=2)
+    print(f"Loaded {mix.shape[1] / sr:.2f} seconds of audio at {sr} Hz")
+
     model = ILRMA_GRAPH(frame_shift=256, n_iter=50, n_components=2, k_NMF_bases=32)
 
-    mix_out = model(mix)
-
     fname = mix_fname.split('/')[-1].split('.')[0]
-    out_path = f"mix_out_{fname}_K32_C2_V2_256.wav"
+    out_path = f"mix_out_{fname}_K32_C2_256.wav"
     print(f"Saving output to {out_path}")
+
+    # Need to run model again to get output since profile returns dict
+    with torch.no_grad():
+        mix_out = model(mix)
     save_audio_sf(out_path, mix_out, sr)

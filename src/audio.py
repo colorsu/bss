@@ -1,11 +1,73 @@
-"""
-STFT (Short-Time Fourier Transform) utility module.
-
-This module provides a PyTorch-based STFT implementation for audio processing.
-"""
-
 import torch
 import numpy as np
+import soundfile as sf
+
+
+def load_audio_sf(path, n_channels=None, seconds=None):
+    """Load an audio file using soundfile and return a PyTorch tensor.
+
+    Args:
+        path (str): Path to the audio file.
+        n_channels (int, optional): Number of channels to keep. If given and the
+            file has more channels, it will be truncated; if it has fewer,
+            a :class:`ValueError` is raised.
+        seconds (float, optional): Duration in seconds to load. If given, only
+            the first `seconds` of audio will be loaded.
+
+    Returns:
+        tuple[torch.Tensor, int]: ``(audio, sample_rate)`` where ``audio`` has
+        shape ``[channels, time]`` or ``[time]``.
+    """
+
+    # Determine how many frames to read
+    if seconds is not None:
+        info = sf.info(path)
+        frames = int(seconds * info.samplerate)
+        data, samplerate = sf.read(path, frames=frames, dtype="float32")
+    else:
+        data, samplerate = sf.read(path, dtype="float32")
+
+    tensor = torch.from_numpy(data)
+
+    # Soundfile: [time, channels]; we prefer [channels, time]
+    if tensor.ndim == 2:
+        tensor = tensor.t()
+
+    if n_channels is not None:
+        if tensor.ndim == 1:
+            # Mono but multi-channel requested
+            if n_channels != 1:
+                raise ValueError(
+                    f"Input audio has 1 channel, but {n_channels} were requested."
+                )
+        else:
+            if tensor.shape[0] < n_channels:
+                raise ValueError(
+                    f"Input audio has {tensor.shape[0]} channels, but {n_channels} were requested."
+                )
+            elif tensor.shape[0] > n_channels:
+                tensor = tensor[:n_channels, :]
+
+    return tensor, samplerate
+
+
+def save_audio_sf(path, tensor, samplerate):
+    """Save a PyTorch tensor to an audio file using soundfile.
+
+    Args:
+        path (str): Output file path.
+        tensor (torch.Tensor): Audio tensor with shape ``[channels, time]`` or
+            ``[time]``.
+        samplerate (int): Sampling rate in Hz.
+    """
+
+    data = tensor.detach().cpu().numpy()
+
+    if data.ndim == 2:
+        # Convert back to [time, channels]
+        data = data.T
+
+    sf.write(path, data, samplerate)
 
 
 class STFT(torch.nn.Module):
