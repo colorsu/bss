@@ -1,73 +1,115 @@
 import torch
 import numpy as np
 
+def nmf_update(Tn, Vn, Y_n, eps: float = 1e-20):
+    """Shared NMF update used by ILRMA variants.
+
+    Args:
+        Tn: (I, K) nonnegative NMF basis matrix.
+        Vn: (K, J) nonnegative NMF activation matrix.
+        Y_n: (I, J) complex or real spectrogram for source n.
+        eps: small constant for numerical stability.
+
+    Returns:
+        Tn_new, Vn_new, Rn_new where Rn_new = Tn_new @ Vn_new (I, J).
+    """
+    Rn = Tn @ Vn  # (I, J)
+    mag_R = Rn.abs()
+    Y_d_R = Y_n.abs() ** 2 / (mag_R ** 2 + eps)
+    Rn_d = 1.0 / (mag_R + eps)
+
+    Tn_num = Y_d_R @ Vn.T
+    Tn_den = Rn_d @ Vn.T + eps
+    Tn_new = Tn * torch.sqrt(Tn_num / Tn_den)
+
+    Rn = Tn_new @ Vn
+    mag_R_new = Rn.abs()
+    Rn_d_new = 1.0 / (mag_R_new + eps)
+
+    Vn_num = Tn_new.T @ Y_d_R
+    Vn_den = Tn_new.T @ Rn_d_new + eps
+    Vn_new = Vn * torch.sqrt(Vn_num / Vn_den)
+
+    Rn_new = Tn_new @ Vn_new
+    return Tn_new, Vn_new, Rn_new
+
 
 class ILRMA(torch.nn.Module):
-    def __init__(self, n_components=2, k_NMF_bases=8, n_iter=30):
+    def __init__(self, n_components=2, k_NMF_bases=8, n_iter=30,
+                 nmf_eps: float = 1e-20, ip_eps: float = 1e-20):
         super(ILRMA, self).__init__()
         self.n_components = n_components
         self.k_NMF_bases = k_NMF_bases
         self.n_iter = n_iter
-
-    def NMF(self, Tn, Vn, Y_n):
-        # Tn: (I, K), Vn: (K, J), Y_n: (I, J)
-        Rn = Tn @ Vn # (I, J)
-        Y_d_R = Y_n.abs() ** 2 / (Rn.abs() ** 2 + 1e-20)
-        Rn_d = 1 / Rn.abs()
-        Tn_new = Tn * torch.sqrt((Y_d_R @ Vn.T) / (Rn_d @ Vn.T))
-        Rn = Tn_new @ Vn
-        Vn_new = Vn * torch.sqrt((Tn_new.T @ Y_d_R) / (Tn_new.T @ Rn_d))
-        Rn_new = Tn_new @ Vn_new
-        return Tn_new, Vn_new, Rn_new
+        self.nmf_eps = nmf_eps
+        self.ip_eps = ip_eps
 
     def forward(self, X):
         M, J, I, _ = X.shape # M channels, J time frames, I frequency bins,  complex dimension
         N = self.n_components
+
+        assert M == N, "ILRMA assumes number of sources equals number of channels (M == N)."
         K = self.k_NMF_bases
         X = torch.view_as_complex(X.permute(2,0,1,3)) # (I, M, J)
-        W = torch.stack([torch.eye(N, M, dtype=torch.complex64) for _ in range(I)], dim=0)  # (I, N, M)
+        W = torch.stack([
+            torch.eye(N, M, dtype=torch.complex64, device=X.device)
+            for _ in range(I)
+        ], dim=0)  # (I, N, M)
         Y = torch.einsum('inm,imj->inj', W, X)
-        T = torch.rand(I, K, N) * (1 - 1e-8) + 1e-8  # uniform in [1e-8, 1)
-        V = torch.rand(K, J, N) * (1 - 1e-8) + 1e-8  # uniform in [1e-8, 1)
+        T = torch.rand(I, K, N, device=X.device) * (1 - 1e-8) + 1e-8  # uniform in [1e-8, 1)
+        V = torch.rand(K, J, N, device=X.device) * (1 - 1e-8) + 1e-8  # uniform in [1e-8, 1)
+
+        eye_M = torch.eye(M, dtype=torch.complex64, device=X.device)
+
         for l in range(self.n_iter):
             for n in range(N):
                 # Extract Y_hat_n: magnitude spectrogram for source n
                 Y_hat_n = Y[:, n, :]  # (I, J)
-                T[:, :, n], V[:, :, n], Rn = self.NMF(T[:, :, n], V[:, :, n], Y_hat_n)
-                e_n = torch.eye(M, dtype=torch.complex64)[:, n]
+                T[:, :, n], V[:, :, n], Rn = nmf_update(
+                    T[:, :, n], V[:, :, n], Y_hat_n, eps=self.nmf_eps
+                )
+                e_n = eye_M[:, n]
                 for i in range(I):
-                    X_in_hat = X[i, :, :] / Rn[i, :].unsqueeze(0)  # (M, J)
-                    D_in = X_in_hat @ X[i, :, :].conj().T / J # (M, M)
-                    D_reg = D_in + 1e-10 * torch.eye(M, dtype=D_in.dtype, device=D_in.device)
-                    A = W[i, :, :] @ D_reg
-                    b_in = torch.linalg.solve(A, e_n)
-                    denom = b_in.conj() @ (D_reg @ b_in)
-                    W[i, n, :] = b_in / torch.sqrt(denom)
+                    # per-frequency NMF variance for source n: Rn[i] shape (J,)
+                    inv_Rn_i = 1.0 / (Rn[i, :] + self.ip_eps)  # (J,)
+
+                    # X_sqrt_weighted(i) = X(i) * sqrt(1 / Rn_i)
+                    X_sqrt_weighted_i = X[i, :, :] * torch.sqrt(inv_Rn_i).unsqueeze(0)  # (M, J)
+
+                    # D_in(i) = 1/J * X_sqrt_weighted(i) X_sqrt_weighted(i)^H
+                    D_in = X_sqrt_weighted_i @ X_sqrt_weighted_i.conj().T / J  # (M, M)
+
+                    # Regularize for numerical stability
+                    D_reg = D_in + self.ip_eps * eye_M
+
+                    # A_i = W_i D_reg_i
+                    A = W[i, :, :] @ D_reg  # (N, M) x (M, M) -> (N, M)
+
+                    # Solve A_i^H b = e_n; keep it equivalent to the original scalar form that solved A b = e_n
+                    b_in = torch.linalg.solve(A, e_n)  # (M,)
+
+                    # denom_i = b_in^H D_reg b_in
+                    denom = b_in.conj().unsqueeze(0) @ (D_reg @ b_in.unsqueeze(1))  # (1,1)
+                    denom = torch.sqrt(denom.real + self.ip_eps)
+
+                    W[i, n, :] = (b_in / denom).conj()
 
                 # check if nan occurs
                 if torch.isnan(W).any():
                     raise ValueError("NaN occurred in W matrix during ILRMA iterations.")
             Y = torch.einsum('inm,imj->inj', W, X)
-        
+
         return torch.view_as_real(Y.permute(1,2,0).contiguous())  # (N, J, I)
-    
+
 class ILRMA_V2(torch.nn.Module):
-    def __init__(self, n_components=2, k_NMF_bases=8, n_iter=30):
+    def __init__(self, n_components=2, k_NMF_bases=8, n_iter=30,
+                 nmf_eps: float = 1e-20, ip_eps: float = 1e-20):
         super().__init__()
         self.n_components = n_components
         self.k_NMF_bases = k_NMF_bases
         self.n_iter = n_iter
-
-    def NMF(self, Tn, Vn, Y_n):
-        # Tn: (I, K), Vn: (K, J), Y_n: (I, J)
-        Rn = Tn @ Vn
-        Y_d_R = Y_n.abs() ** 2 / (Rn.abs() ** 2 + 1e-20)
-        Rn_d = 1 / (Rn.abs() + 1e-20)
-        Tn_new = Tn * torch.sqrt((Y_d_R @ Vn.T) / (Rn_d @ Vn.T + 1e-20))
-        Rn = Tn_new @ Vn
-        Vn_new = Vn * torch.sqrt((Tn_new.T @ Y_d_R) / (Tn_new.T @ Rn_d + 1e-20))
-        Rn_new = Tn_new @ Vn_new
-        return Tn_new, Vn_new, Rn_new
+        self.nmf_eps = nmf_eps
+        self.ip_eps = ip_eps
 
     def forward(self, X):
         # X: (M, J, I, 2) real/imag
@@ -97,12 +139,14 @@ class ILRMA_V2(torch.nn.Module):
             for n in range(N):
                 # --- 1. NMF update ---
                 Y_hat_n = Y[:, n, :]  # (I, J)
-                T[:, :, n], V[:, :, n], Rn = self.NMF(T[:, :, n], V[:, :, n], Y_hat_n)
+                T[:, :, n], V[:, :, n], Rn = nmf_update(
+                    T[:, :, n], V[:, :, n], Y_hat_n, eps=self.nmf_eps
+                )
                 # Rn: (I, J)
 
                 # --- 2. IP update for all frequencies ---
                 # Compute X_sqrt_weighted = X_i / sqrt(r_ijn)
-                inv_Rn = 1.0 / (Rn + 1e-20)  # (I, J)
+                inv_Rn = 1.0 / (Rn + self.ip_eps)  # (I, J)
                 X_sqrt_weighted = X_c * torch.sqrt(inv_Rn).unsqueeze(1)  # (I, M, J)
 
                 # D_in(i) = 1/J * X_sqrt_weighted(i) X_sqrt_weighted(i)^H, shape (I, M, M)
@@ -112,7 +156,7 @@ class ILRMA_V2(torch.nn.Module):
                 ) / J  # (I, M, M)
 
                 # Regularize for numerical stability
-                D_reg = D_in + 1e-6 * eye_M.unsqueeze(0)
+                D_reg = D_in + self.ip_eps * eye_M.unsqueeze(0)
 
                 # A_i = W_i D_reg_i, shapes (I, M, M)
                 A = torch.matmul(W, D_reg)  # (I, M, M) because M == N
@@ -126,7 +170,7 @@ class ILRMA_V2(torch.nn.Module):
                 # denom_i = b_in(i)^H D_reg(i) b_in(i)
                 b_H = b_in.conj().transpose(1, 2)  # (I, 1, M)
                 denom = torch.matmul(torch.matmul(b_H, D_reg), b_in)  # (I, 1, 1)
-                denom = torch.sqrt(denom.real + 1e-20)  # real positive scalar per frequency
+                denom = torch.sqrt(denom.real + self.ip_eps)  # real positive scalar per frequency
 
                 # Update nth row of W_i: w_in^H = b_in^H / sqrt(b_in^H D_in b_in)
                 w_in = (b_in / denom).squeeze(-1).conj()  # (I, M)

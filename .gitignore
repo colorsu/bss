@@ -1,24 +1,24 @@
 #--- uv ---
 
-#忽略 uv 创建的默认虚拟环境目录
+# Ignore the default virtual environment directory created by uv
 
-#注意：不要忽略 uv.lock，它应该被提交！
+# Note: do not ignore uv.lock, it should be committed!
 
 .venv/
 
 #--- Python General ---
 
-#字节码和缓存
+# Bytecode and cache
 
 pycache/
 *.py[cod]
 *.pyo
 
-#C 语言扩展
+# C extensions
 
 *.so
 
-#构建和分发产物
+# Build and distribution artifacts
 
 build/
 dist/
@@ -27,7 +27,7 @@ wheelhouse/
 *.egg-info/
 *.egg
 
-#--- 测试 ---
+# --- Tests ---
 
 .pytest_cache/
 .coverage
@@ -35,9 +35,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-#--- 秘密与配置 ---
+# --- Secrets and configuration ---
 
-#忽略本地环境变量文件
+# Ignore local environment variable files
 
 .env
 *.env
@@ -48,7 +48,7 @@ coverage.xml
 
 .idea/
 
-#VS Code (这是一个常见的折中方案，允许共享设置)
+# VS Code (a common compromise that allows sharing settings)
 
 .vscode/*
 !.vscode/settings.json
