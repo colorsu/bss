@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 from src.audio import STFT
-from src.bss import ILRMA
+from src.bss import ILRMA, ILRMA_V2
 import soundfile as sf
 
 class ILRMA_GRAPH(torch.nn.Module):
@@ -22,14 +22,15 @@ class ILRMA_GRAPH(torch.nn.Module):
         self.n_iter = n_iter
         self.frame_shift = frame_shift
         self.stft = STFT(win_len=512, shift_len=frame_shift)
-        self.ilrma = ILRMA(n_components=2, k_NMF_bases=8, n_iter=n_iter)
+        # self.ilrma = ILRMA(n_components=2, k_NMF_bases=8, n_iter=n_iter)
+        self.ilrma = ILRMA_V2(n_components=2, k_NMF_bases=8, n_iter=n_iter)
 
     def forward(self, mix, n_src=1):
         mix_spec = self.stft.transform(mix)
         print(f"Mix spectrogram shape: {mix_spec.shape}")
 
         mix_out_spec = self.ilrma(mix_spec)
-        mix_out = self.stft.inverse(mix_out_spec[0, :, :, :].unsqueeze(0))
+        mix_out = self.stft.inverse(mix_out_spec)
 
         return mix_out
 
@@ -58,7 +59,8 @@ def save_audio_sf(path, tensor, samplerate):
     sf.write(path, data, samplerate)
 
 if __name__ == "__main__":
-    mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
+    # mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
+    mix_fname = "../noise_test_2ch.wav"
     mix, sr = load_audio_sf(mix_fname)
     model = ILRMA_GRAPH(n_iter=30)
 
