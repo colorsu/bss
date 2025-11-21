@@ -35,21 +35,21 @@ class ILRMA_GRAPH(torch.nn.Module):
         return mix_out
 
 if __name__ == "__main__":
-    # mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
+    mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
     # mix_fname = "../noise_test_2ch.wav"
     # mix_fname = "../train_low_snr.wav"
-    mix_fname = "../train_high_snr.wav"
+    # mix_fname = "../train_high_snr.wav"
 
     mix, sr = load_audio_sf(mix_fname, n_channels=2)
     print(f"Loaded {mix.shape[1] / sr:.2f} seconds of audio at {sr} Hz")
 
-    model = ILRMA_GRAPH(frame_shift=256, n_iter=50, n_components=2, k_NMF_bases=32)
+    model = ILRMA_GRAPH(frame_shift=512, n_iter=100, n_components=2, k_NMF_bases=8)
 
     fname = mix_fname.split('/')[-1].split('.')[0]
-    out_path = f"mix_out_{fname}_K32_C2_256.wav"
+    out_path = f"mix_out_{fname}_K8_C2_512.wav"
     print(f"Saving output to {out_path}")
 
-    # Need to run model again to get output since profile returns dict
+    # Need to run model again to get outp ut since profile returns dict
     with torch.no_grad():
         mix_out = model(mix)
     save_audio_sf(out_path, mix_out, sr)

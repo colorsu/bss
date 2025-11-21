@@ -18,7 +18,7 @@ class AUX_IVA_GRAPH(torch.nn.Module):
         self.n_iter = n_iter
         self.frame_shift = frame_shift
         self.stft = STFT(win_len=frame_shift * 2, shift_len=frame_shift)
-        self.iva = AUX_IVA_ISS(n_iter=n_iter, contrast_func=contrast_func)
+        self.iva = AUX_IVA_ISS(n_iter=n_iter, contrast_func=contrast_func, ref_mic=1)
         print(
             f"Initialized AUX_IVA_GRAPH with n_iter={n_iter}, "
             f"frame_shift={frame_shift}, contrast_func={contrast_func}"
@@ -37,15 +37,15 @@ class AUX_IVA_GRAPH(torch.nn.Module):
 
 if __name__ == "__main__":
     # For convenience, reuse the same mixture as ILRMA test if present
-    mix_fname = "../train_high_snr.wav"
-
+    # mix_fname = "../train_high_snr.wav"
+    mix_fname = "/Users/kolor/myWork/data/地铁-0626.wav"
     mix, sr = load_audio_sf(mix_fname, n_channels=2)
     print(f"Loaded {mix.shape[1] / sr:.2f} seconds of audio at {sr} Hz")
 
     model = AUX_IVA_GRAPH(n_iter=30, frame_shift=256, contrast_func="gaussian")
 
     fname = mix_fname.split("/")[-1].split(".")[0]
-    out_path = f"mix_out_iva_{fname}.wav"
+    out_path = f"mix_out_iva_{fname}_gaussian.wav"
     print(f"Saving output to {out_path}")
 
     # Need to run model again to get output since profile returns dict
