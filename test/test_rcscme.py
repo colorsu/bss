@@ -54,7 +54,7 @@ if __name__ == "__main__":
     target_audio = model(mix)
 
     fname = os.path.basename(mix_fname).split('.')[0]
-    out_path = f"mix_out_rcscme_{fname}.wav"
+    out_path = f"mix_out2_rcscme_{fname}.wav"
     print(f"Saving output to {out_path}")
     save_audio_sf(out_path, target_audio, sr)
     

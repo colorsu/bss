@@ -93,7 +93,7 @@ def select_target_index(Y, sr=16000, n_fft=512):
 
         # Calculate Variance (or Coefficient of Variation)
         # Speech envelopes typically fluctuate more than stationary noise
-        # variance = torch.var(envelope)
+        variance = torch.var(envelope)
 
         # Comprehensive Score:
         # In practice, sometimes Variance is more stable than Kurtosis,
@@ -101,7 +101,7 @@ def select_target_index(Y, sr=16000, n_fft=512):
         # We assume: higher fluctuation (Variance) and higher sparsity (Kurtosis) -> likely speech.
         
         # You can adjust weights based on experiments, or use just one.
-        score = kurt 
+        score = variance + 0.3 * kurt
         scores.append(score)
 
     # Select the source with the highest score

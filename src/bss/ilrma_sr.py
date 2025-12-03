@@ -4,8 +4,11 @@ import torch
 from .utils import nmf_update
 
 
-class ILRMA_V2(torch.nn.Module):
-    """ILRMA spatially regularized vectorized/batched implementation for improved performance.
+class ILRMA_SR(torch.nn.Module):
+    """ILRMA vectorized/batched implementation for improved performance.
+
+    This version performs frequency-wise operations in a vectorized manner
+    for better computational efficiency compared to the per-frequency loop in ILRMA.
 
     Args:
         n_components (int): Number of sources (must equal number of channels). Default: 2
