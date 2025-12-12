@@ -3,12 +3,14 @@ from .ilrma_v2 import ILRMA_V2
 from .ilrma_sr import ILRMA_SR
 from .aux_iva_iss import AUX_IVA_ISS
 from .rcscme import RCSCME
+from .iva_ng import IVA_NG
 from .utils import nmf_update, select_target_index
 
 __all__ = [
     "ILRMA",
     "ILRMA_SR",
     "ILRMA_V2",
+    "IVA_NG",
     "AUX_IVA_ISS",
     "RCSCME",
     "nmf_update",
