@@ -4,6 +4,7 @@ IVA 算法统一测试脚本
 通过修改 test_config.py 中的 ACTIVE_IVA 来切换不同的IVA实现:
 - IVA_NG: Natural Gradient IVA
 - AUX_IVA: Auxiliary Function IVA
+- AUX_IVA_ONLINE: Online AuxIVA-ISS (frame-by-frame)
 
 调整参数也在 test_config.py 中进行
 """
@@ -15,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import torch
 from pathlib import Path
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import IVA_NG, AUX_IVA_ISS
+from src.bss import IVA_NG, AUX_IVA_ISS, AUX_IVA_ISS_ONLINE
 from test_config import *
 
 
@@ -43,11 +44,18 @@ class IVATestRunner(torch.nn.Module):
                 contrast_func=config["contrast_func"],
                 ref_mic=config.get("ref_mic", 1)
             )
+        elif algorithm == "AUX_IVA_ONLINE":
+            self.separator = AUX_IVA_ISS_ONLINE(
+                n_iter=config.get("n_iter_per_frame", config.get("n_iter", 2)),
+                alpha=config.get("alpha", 0.98),
+                contrast_func=config["contrast_func"],
+                ref_mic=config.get("ref_mic", 1),
+            )
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
         
         print(f"初始化 {algorithm}")
-        for key, value in config.items():
+        for key, value in config. items():
             print(f"  {key}: {value}")
 
     def forward(self, mix):
@@ -85,7 +93,7 @@ def main():
         output_dir.mkdir(exist_ok=True)
         
         fname = Path(mix_fname).stem
-        output_path = output_dir / f"{fname}_{algorithm}.wav"
+        output_path = output_dir / f"{fname}_{algorithm}_6B.wav"
         save_audio_sf(str(output_path), output, sr)
         print(f"\n✓ 输出已保存到: {output_path}")
     

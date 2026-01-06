@@ -1,6 +1,7 @@
 """Auxiliary-function-based Independent Vector Analysis with Iterative Source Steering."""
 
 import torch
+from .utils import contrast_weights
 
 
 class AUX_IVA_ISS(torch.nn.Module):
@@ -14,7 +15,8 @@ class AUX_IVA_ISS(torch.nn.Module):
         n_iter (int): Number of iterations. Default: 20
         ref_mic (int): Reference microphone for back-projection (1-based, 0 for none). Default: 0
         contrast_func (str): Contrast function for independence measure. Options:
-            "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5". Default: "laplace"
+            "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5", "power". Default: "laplace"
+        gamma (float): Exponent for "power" contrast function. Default: 1.0
         tol (float): Convergence tolerance. Default: 1e-5
         eps_r (float): Small constant for numerical stability in norms. Default: 1e-10
         reg (float): Regularization parameter for covariance matrices. Default: 1e-6
@@ -22,6 +24,7 @@ class AUX_IVA_ISS(torch.nn.Module):
 
     def __init__(self, n_iter: int = 20, ref_mic: int = 0,
                  contrast_func: str = "laplace",
+                 gamma: float = 1.0,
                  tol: float = 1e-5,
                  eps_r: float = 1e-10,
                  reg: float = 1e-6):
@@ -29,41 +32,11 @@ class AUX_IVA_ISS(torch.nn.Module):
         self.n_iter = n_iter
         self.ref_mic = ref_mic
         self.contrast_func = contrast_func
+        self.gamma = gamma
         self.tol = tol
         self.eps_r = eps_r
         self.reg = reg
 
-    def _contrast_weights(self, r: torch.Tensor) -> torch.Tensor:
-        """Compute contrast weights g'(r)/r for different contrast functions.
-
-        Args:
-            r: (...,) nonnegative norms.
-
-        Returns:
-            (...,) weights.
-        """
-        eps_r = self.eps_r
-        r_safe = torch.clamp(r, min=eps_r)
-        if self.contrast_func == "laplace":
-            # g(r) = r -> g'(r)/r = 1/r
-            return 1.0 / r_safe
-        elif self.contrast_func == "gaussian":
-            # g(r) = r^2 -> g'(r)/r = 2
-            return torch.full_like(r_safe, 2.0)
-        elif self.contrast_func == "logcosh":
-            # g(r) = log(cosh(r)) -> g'(r)/r = tanh(r)/r
-            return torch.tanh(r_safe) / r_safe
-        elif self.contrast_func == "exp":
-            # g(r) = -exp(-r^2/2) -> g'(r)/r = exp(-r^2/2)
-            return torch.exp(-(r_safe ** 2) / 2.0)
-        elif self.contrast_func == "pow1.5":
-            # g(r) = r^1.5 -> g'(r)/r = 1.5/sqrt(r)
-            return 1.5 / torch.sqrt(r_safe)
-        elif self.contrast_func == "pow0.5":
-            # g(r) = r^0.5 -> g'(r)/r = 0.5/r^1.5
-            return 0.5 / (r_safe ** 1.5)
-        else:
-            raise ValueError(f"Unknown contrast function: {self.contrast_func}")
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """AUX-IVA (offline) with iterative source steering (ISS).
@@ -109,7 +82,7 @@ class AUX_IVA_ISS(torch.nn.Module):
             r = torch.sqrt(torch.clamp(Y_mag2, min=self.eps_r))  # (K, T)
 
             # 2b) Weights w_t(k,t)
-            w_t = self._contrast_weights(r)  # (K, T)
+            w_t = contrast_weights(r, self.contrast_func, self.gamma, self.eps_r)  # (K, T)
 
             # 3) Build weighted covariance V_{k,f} and update w_{k,f} via ISS
             for f in range(F):

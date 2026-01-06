@@ -3,6 +3,64 @@
 import torch
 
 
+def contrast_weights(
+    r: torch.Tensor,
+    contrast_func: str = "laplace",
+    gamma: float = 1.0,
+    eps: float = 1e-10,
+) -> torch.Tensor:
+    """Compute contrast weights φ(r) = g'(r)/r for different contrast functions.
+
+    Used in IVA-based source separation algorithms to weight the covariance
+    matrices based on source activity.
+
+    Args:
+        r: (...,) nonnegative norms (e.g., cross-frequency signal magnitudes).
+        contrast_func: Type of contrast function. Options:
+            - "laplace": g(r) = r → φ(r) = 1/r (super-Gaussian, sparse sources)
+            - "gaussian": g(r) = r² → φ(r) = 2 (Gaussian sources)
+            - "logcosh": g(r) = log(cosh(r)) → φ(r) = tanh(r)/r
+            - "exp": g(r) = -exp(-r²/2) → φ(r) = exp(-r²/2)
+            - "pow1.5": g(r) = r^1.5 → φ(r) = 1.5/√r
+            - "pow0.5": g(r) = r^0.5 → φ(r) = 0.5/r^1.5
+            - "power": g(r) = r^γ → φ(r) = γ·r^(γ-2) (uses gamma parameter)
+        gamma: Exponent for "power" contrast function. Default: 1.0.
+        eps: Small constant for numerical stability. Default: 1e-10.
+
+    Returns:
+        (...,) contrast weights with same shape as input r.
+
+    Example:
+        >>> r = torch.tensor([0.5, 1.0, 2.0])
+        >>> w = contrast_weights(r, "laplace")  # returns [2., 1., 0.5]
+    """
+    r_safe = torch.clamp(r, min=eps)
+
+    if contrast_func == "laplace":
+        # g(r) = r -> g'(r)/r = 1/(2r) (matches Robin Scheibler's implementation)
+        return 1.0 / (2.0 * r_safe)
+    elif contrast_func == "gaussian":
+        # g(r) = r^2 -> g'(r)/r = 2
+        return torch.full_like(r_safe, 2.0)
+    elif contrast_func == "logcosh":
+        # g(r) = log(cosh(r)) -> g'(r)/r = tanh(r)/r
+        return torch.tanh(r_safe) / r_safe
+    elif contrast_func == "exp":
+        # g(r) = -exp(-r^2/2) -> g'(r)/r = exp(-r^2/2)
+        return torch.exp(-(r_safe ** 2) / 2.0)
+    elif contrast_func == "pow1.5":
+        # g(r) = r^1.5 -> g'(r)/r = 1.5/sqrt(r)
+        return 1.5 / torch.sqrt(r_safe)
+    elif contrast_func == "pow0.5":
+        # g(r) = r^0.5 -> g'(r)/r = 0.5/r^1.5
+        return 0.5 / (r_safe ** 1.5)
+    elif contrast_func == "power":
+        # g(r) = r^gamma -> g'(r)/r = gamma * r^(gamma-2)
+        return gamma * (r_safe ** (gamma - 2))
+    else:
+        raise ValueError(f"Unknown contrast function: {contrast_func}")
+
+
 def nmf_update(Tn, Vn, Y_n, eps: float = 1e-20):
     """Shared NMF update used by ILRMA variants.
 
