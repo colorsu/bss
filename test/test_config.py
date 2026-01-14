@@ -10,6 +10,7 @@
 
 # ==================== 音频文件配置 ====================
 AUDIO_FILE = "/Users/kolor/myWork/data/JL_FB_ANF.wav"
+# AUDIO_FILE = "/Users/kolor/myWork/data/星巴克-0626.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/bss/generated_mix.wav"
 # AUDIO_FILE = "../noise_test_2ch.wav"
 
@@ -17,8 +18,8 @@ N_CHANNELS = 3  # 输入音频的声道数
 
 
 # ==================== IVA 算法配置 ====================
-# 选择要测试的IVA算法: "IVA_NG", "AUX_IVA", 或 "AUX_IVA_ONLINE"
-ACTIVE_IVA = "AUX_IVA_ONLINE"
+# 选择要测试的IVA算法: "IVA_NG", "AUX_IVA", "AUX_IVA_ONLINE", "AUX_OVER_IVA_ONLINE"
+ACTIVE_IVA = "AUX_OVER_IVA_ONLINE"
 
 IVA_NG_CONFIG = {
     "n_iter": 200,
@@ -38,12 +39,24 @@ AUX_IVA_CONFIG = {
 AUX_IVA_ONLINE_CONFIG = {
     # Online algorithm updates per time frame
     "n_iter": 1,  # kept for compatibility/printing; not used directly
-    "n_iter_per_frame": 2,
+    "n_iter_per_frame": 1,
     "alpha": 0.98,
     "frame_shift": 256,
-    "contrast_func": "power",  # Options: "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5", "power"
+    "contrast_func": "laplace",  # Options: "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5", "power"
     "gamma": 0.002,  # Exponent for "power" contrast function: g(r) = r^gamma
-    "proj_back_type": "scale_constraint",  # Options: "mdp" (Minimal Distortion), "scale_constraint", "none"
+    "proj_back_type": "mdp",  # Options: "mdp" (Minimal Distortion), "scale_constraint", "none"
+    "ref_mic": 1,
+}
+
+AUX_OVER_IVA_ONLINE_CONFIG = {
+    "num_targets": 1,  # Number of target sources K (must be < num_mics M)
+    "n_iter": 1,  # ISS iterations per frame
+    "n_iter_per_frame": 1,
+    "alpha": 0.98,
+    "frame_shift": 256,
+    "contrast_func": "laplace",
+    "gamma": 1.0,
+    "proj_back_type": "scale_constraint",
     "ref_mic": 1,
 }
 
@@ -98,6 +111,8 @@ def get_iva_config():
         return ACTIVE_IVA, AUX_IVA_CONFIG
     elif ACTIVE_IVA == "AUX_IVA_ONLINE":
         return ACTIVE_IVA, AUX_IVA_ONLINE_CONFIG
+    elif ACTIVE_IVA == "AUX_OVER_IVA_ONLINE":
+        return ACTIVE_IVA, AUX_OVER_IVA_ONLINE_CONFIG
     else:
         raise ValueError(f"Unknown IVA algorithm: {ACTIVE_IVA}")
 

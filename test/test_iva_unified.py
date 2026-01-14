@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import torch
 from pathlib import Path
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import IVA_NG, AUX_IVA_ISS, AUX_IVA_ISS_ONLINE
+from src.bss import IVA_NG, AUX_IVA_ISS, AUX_IVA_ISS_ONLINE, AUX_OVER_IVA_ONLINE
 from test_config import *
 
 
@@ -50,6 +50,15 @@ class IVATestRunner(torch.nn.Module):
                 alpha=config.get("alpha", 0.98),
                 contrast_func=config["contrast_func"],
                 ref_mic=config.get("ref_mic", 1),
+            )
+        elif algorithm == "AUX_OVER_IVA_ONLINE":
+            self.separator = AUX_OVER_IVA_ONLINE(
+                num_targets=config.get("num_targets", 2),
+                n_iter=config.get("n_iter_per_frame", config.get("n_iter", 1)),
+                alpha=config.get("alpha", 0.98),
+                contrast_func=config["contrast_func"],
+                ref_mic=config.get("ref_mic", 1),
+                proj_back_type=config.get("proj_back_type", "mdp"),
             )
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
@@ -93,7 +102,7 @@ def main():
         output_dir.mkdir(exist_ok=True)
         
         fname = Path(mix_fname).stem
-        output_path = output_dir / f"{fname}_{algorithm}_6B.wav"
+        output_path = output_dir / f"{fname}_{algorithm}_6e4.wav"
         save_audio_sf(str(output_path), output, sr)
         print(f"\n✓ 输出已保存到: {output_path}")
     
