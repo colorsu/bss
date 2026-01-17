@@ -11,15 +11,18 @@
 # ==================== 音频文件配置 ====================
 AUDIO_FILE = "/Users/kolor/myWork/data/JL_FB_ANF.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/data/星巴克-0626.wav"
+# AUDIO_FILE = "/Users/kolor/myWork/data/train_3p1_1209.wav"
+# AUDIO_FILE = "/Users/kolor/myWork/data/train_3p1_short.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/bss/generated_mix.wav"
 # AUDIO_FILE = "../noise_test_2ch.wav"
+OUTPUT_POSTFIX = '4_M=2'
 
-N_CHANNELS = 3  # 输入音频的声道数
+N_CHANNELS = 2  # 输入音频的声道数
 
 
 # ==================== IVA 算法配置 ====================
-# 选择要测试的IVA算法: "IVA_NG", "AUX_IVA", "AUX_IVA_ONLINE", "AUX_OVER_IVA_ONLINE"
-ACTIVE_IVA = "AUX_OVER_IVA_ONLINE"
+# 选择要测试的IVA算法: "IVA_NG", "AUX_IVA", "AUX_IVA_ONLINE", "AUX_OVER_IVA", "AUX_OVER_IVA_ONLINE"
+ACTIVE_IVA = "AUX_IVA"
 
 IVA_NG_CONFIG = {
     "n_iter": 200,
@@ -42,21 +45,32 @@ AUX_IVA_ONLINE_CONFIG = {
     "n_iter_per_frame": 1,
     "alpha": 0.98,
     "frame_shift": 256,
-    "contrast_func": "laplace",  # Options: "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5", "power"
+    "contrast_func": "gaussian",  # Options: "laplace", "gaussian", "logcosh", "exp", "pow1.5", "pow0.5", "power"
     "gamma": 0.002,  # Exponent for "power" contrast function: g(r) = r^gamma
     "proj_back_type": "mdp",  # Options: "mdp" (Minimal Distortion), "scale_constraint", "none"
     "ref_mic": 1,
+}
+
+AUX_OVER_IVA_CONFIG = {
+    "num_targets": 1,  # Number of target sources K (must be < num_mics M)
+    "n_iter": 50,  # Total IP iterations
+    "frame_shift": 512,
+    "contrast_func": "power",
+    "gamma": 0.05,
+    "proj_back_type": "scale_constraint",
+    "ref_mic": 1,
+    "tol": 1e-8,
 }
 
 AUX_OVER_IVA_ONLINE_CONFIG = {
     "num_targets": 1,  # Number of target sources K (must be < num_mics M)
     "n_iter": 1,  # ISS iterations per frame
     "n_iter_per_frame": 1,
-    "alpha": 0.98,
-    "frame_shift": 256,
-    "contrast_func": "laplace",
-    "gamma": 1.0,
-    "proj_back_type": "scale_constraint",
+    "alpha": 0.99,
+    "frame_shift": 512,
+    "contrast_func": "power",
+    "gamma": 0.02,
+    "proj_back_type": "mdp",
     "ref_mic": 1,
 }
 
@@ -111,6 +125,8 @@ def get_iva_config():
         return ACTIVE_IVA, AUX_IVA_CONFIG
     elif ACTIVE_IVA == "AUX_IVA_ONLINE":
         return ACTIVE_IVA, AUX_IVA_ONLINE_CONFIG
+    elif ACTIVE_IVA == "AUX_OVER_IVA":
+        return ACTIVE_IVA, AUX_OVER_IVA_CONFIG
     elif ACTIVE_IVA == "AUX_OVER_IVA_ONLINE":
         return ACTIVE_IVA, AUX_OVER_IVA_ONLINE_CONFIG
     else:

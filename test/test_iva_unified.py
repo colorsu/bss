@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 import torch
 from pathlib import Path
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import IVA_NG, AUX_IVA_ISS, AUX_IVA_ISS_ONLINE, AUX_OVER_IVA_ONLINE
+from src.bss import IVA_NG, AUX_IVA_ISS, AUX_IVA_ISS_ONLINE, AUX_OVER_IVA, AUX_OVER_IVA_ONLINE
 from test_config import *
 
 
@@ -29,6 +29,7 @@ class IVATestRunner(torch.nn.Module):
         self.config = config
         self.frame_shift = config["frame_shift"]
         self.stft = STFT(win_len=self.frame_shift * 2, shift_len=self.frame_shift)
+        self.contrast_func = config["contrast_func"]
         
         # 根据算法类型初始化分离器
         if algorithm == "IVA_NG":
@@ -50,6 +51,15 @@ class IVATestRunner(torch.nn.Module):
                 alpha=config.get("alpha", 0.98),
                 contrast_func=config["contrast_func"],
                 ref_mic=config.get("ref_mic", 1),
+            )
+        elif algorithm == "AUX_OVER_IVA":
+            self.separator = AUX_OVER_IVA(
+                num_targets=config.get("num_targets", 1),
+                n_iter=config.get("n_iter", 20),
+                contrast_func=config["contrast_func"],
+                ref_mic=config.get("ref_mic", 1),
+                proj_back_type=config.get("proj_back_type", "mdp"),
+                tol=config.get("tol", 1e-5),
             )
         elif algorithm == "AUX_OVER_IVA_ONLINE":
             self.separator = AUX_OVER_IVA_ONLINE(
@@ -102,7 +112,7 @@ def main():
         output_dir.mkdir(exist_ok=True)
         
         fname = Path(mix_fname).stem
-        output_path = output_dir / f"{fname}_{algorithm}_6e4.wav"
+        output_path = output_dir / f"{fname}_{algorithm}_{model.contrast_func}_{OUTPUT_POSTFIX}.wav"
         save_audio_sf(str(output_path), output, sr)
         print(f"\n✓ 输出已保存到: {output_path}")
     
