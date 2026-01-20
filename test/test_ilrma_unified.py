@@ -17,7 +17,7 @@ import torch
 import numpy as np
 from pathlib import Path
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import ILRMA, ILRMA_V2, ILRMA_SR
+from src.bss import ILRMA, ILRMA_V2, ILRMA_SR, ILRMA_REALTIME
 from test_config import *
 
 
@@ -30,7 +30,6 @@ class ILRMATestRunner(torch.nn.Module):
         self.config = config
         self.frame_shift = config["frame_shift"]
         self.stft = STFT(win_len=self.frame_shift * 2, shift_len=self.frame_shift)
-        
         # 根据算法类型初始化分离器
         if algorithm == "ILRMA":
             self.separator = ILRMA(
@@ -49,6 +48,15 @@ class ILRMATestRunner(torch.nn.Module):
                 n_components=config["n_components"],
                 k_NMF_bases=config["k_NMF_bases"],
                 n_iter=config["n_iter"]
+            )
+        elif algorithm == "ILRMA_REALTIME":
+            self.separator = ILRMA_REALTIME(
+                n_components=config["n_components"],
+                k_NMF_bases=config["k_NMF_bases"],
+                n_iter=config["n_iter"],
+                observation_window_sec=config.get("observation_window_sec", 5.0),
+                update_interval_frames=config.get("update_interval_frames", 16),
+                hop_length=config["frame_shift"],
             )
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
@@ -103,7 +111,7 @@ def main():
         output_dir.mkdir(exist_ok=True)
         
         fname = Path(mix_fname).stem
-        output_path = output_dir / f"{fname}_{algorithm}.wav"
+        output_path = output_dir / f"{fname}_{algorithm}_{OUTPUT_POSTFIX}.wav"
         save_audio_sf(str(output_path), output, sr)
         print(f"\n✓ 输出已保存到: {output_path}")
     

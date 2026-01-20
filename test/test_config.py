@@ -9,15 +9,15 @@
 """
 
 # ==================== 音频文件配置 ====================
-AUDIO_FILE = "/Users/kolor/myWork/data/JL_FB_ANF.wav"
+# AUDIO_FILE = "/Users/kolor/myWork/data/JL_FB_ANF.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/data/星巴克-0626.wav"
-# AUDIO_FILE = "/Users/kolor/myWork/data/train_3p1_1209.wav"
+AUDIO_FILE = "/Users/kolor/myWork/data/train_3p1_1209.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/data/train_3p1_short.wav"
 # AUDIO_FILE = "/Users/kolor/myWork/bss/generated_mix.wav"
 # AUDIO_FILE = "../noise_test_2ch.wav"
-OUTPUT_POSTFIX = '4_M=2'
+OUTPUT_POSTFIX = '1A'
 
-N_CHANNELS = 2  # 输入音频的声道数
+N_CHANNELS = 3  # 输入音频的声道数
 
 
 # ==================== IVA 算法配置 ====================
@@ -76,8 +76,8 @@ AUX_OVER_IVA_ONLINE_CONFIG = {
 
 
 # ==================== ILRMA 算法配置 ====================
-# 选择要测试的ILRMA算法: "ILRMA", "ILRMA_V2", 或 "ILRMA_SR"
-ACTIVE_ILRMA = "ILRMA_V2"
+# 选择要测试的ILRMA算法: "ILRMA", "ILRMA_V2", "ILRMA_SR", 或 "ILRMA_REALTIME"
+ACTIVE_ILRMA = "ILRMA_REALTIME"
 
 ILRMA_CONFIG = {
     "n_iter": 100,
@@ -88,7 +88,7 @@ ILRMA_CONFIG = {
 
 ILRMA_V2_CONFIG = {
     "n_iter": 100,
-    "frame_shift": 256,
+    "frame_shift": 256*5,
     "n_components": N_CHANNELS,
     "k_NMF_bases": 16,
 }
@@ -99,6 +99,15 @@ ILRMA_SR_CONFIG = {
     "n_components": 2,
     "k_NMF_bases": 8,
     # 对于ILRMA_SR，需要在代码中生成steering vector
+}
+
+ILRMA_REALTIME_CONFIG = {
+    "n_iter": 1,  # 后台更新时的迭代次数
+    "frame_shift": 512,  # 实时帧移
+    "n_components": N_CHANNELS,
+    "k_NMF_bases": 1,
+    "observation_window_sec": 5.0,  # 观测窗长（秒）
+    "update_interval_frames": 8,  # 更新间隔（帧数）
 }
 
 
@@ -141,6 +150,8 @@ def get_ilrma_config():
         return ACTIVE_ILRMA, ILRMA_V2_CONFIG
     elif ACTIVE_ILRMA == "ILRMA_SR":
         return ACTIVE_ILRMA, ILRMA_SR_CONFIG
+    elif ACTIVE_ILRMA == "ILRMA_REALTIME":
+        return ACTIVE_ILRMA, ILRMA_REALTIME_CONFIG
     else:
         raise ValueError(f"Unknown ILRMA algorithm: {ACTIVE_ILRMA}")
 
