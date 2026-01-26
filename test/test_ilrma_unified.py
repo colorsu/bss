@@ -17,7 +17,7 @@ import torch
 import numpy as np
 from pathlib import Path
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import ILRMA, ILRMA_V2, ILRMA_SR, ILRMA_REALTIME
+from src.bss import ILRMA, ILRMA_V2, ILRMA_SR, ILRMA_REALTIME, ILRMA_NOISY
 from test_config import *
 
 
@@ -57,6 +57,12 @@ class ILRMATestRunner(torch.nn.Module):
                 observation_window_sec=config.get("observation_window_sec", 5.0),
                 update_interval_frames=config.get("update_interval_frames", 16),
                 hop_length=config["frame_shift"],
+            )
+        elif algorithm == "ILRMA_NOISY":
+            self.separator = ILRMA_NOISY(
+                n_components=config["n_components"],
+                k_NMF_bases=config["k_NMF_bases"],
+                n_iter=config["n_iter"]
             )
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")

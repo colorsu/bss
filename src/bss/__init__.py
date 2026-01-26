@@ -1,26 +1,72 @@
-from .ilrma import ILRMA
-from .ilrma_v2 import ILRMA_V2
-from .ilrma_sr import ILRMA_SR
-from .ilrma_real_time import ILRMA_REALTIME
-from .aux_iva_iss import AUX_IVA_ISS
-from .aux_iva_iss_online import AUX_IVA_ISS_ONLINE
-from .aux_over_iva import AUX_OVER_IVA
-from .aux_over_iva_online import AUX_OVER_IVA_ONLINE
+"""Blind Source Separation (BSS) algorithms package.
+
+This package provides implementations of various BSS algorithms including:
+- IVA (Independent Vector Analysis) algorithms
+- ILRMA (Independent Low-Rank Matrix Analysis) algorithms
+- RCSCME algorithms
+
+Usage:
+    from bss import ILRMA, AUX_IVA_ISS, get_bss, list_algorithms
+
+    # Direct instantiation
+    algo = ILRMA(n_components=2, n_iter=100)
+
+    # Or use registry
+    algo = get_bss("ILRMA", n_components=2, n_iter=100)
+"""
+
+# Base class and registry
+from .base import BSSBase
+from .registry import get_bss, list_algorithms, get_algorithm_info, register_bss
+
+# IVA algorithms
+from .iva import (
+    IVA_NG,
+    AUX_IVA_ISS,
+    AUX_IVA_ISS_ONLINE,
+    AUX_OVER_IVA,
+    AUX_OVER_IVA_ONLINE,
+)
+
+# ILRMA algorithms
+from .ilrma import (
+    ILRMA,
+    ILRMA_V2,
+    ILRMA_SR,
+    ILRMA_REALTIME,
+    ILRMA_NOISY,
+)
+
+# RCSCME algorithms
 from .rcscme import RCSCME
-from .iva_ng import IVA_NG
-from .utils import nmf_update, select_target_index
+
+# Utilities
+from .utils import nmf_update, select_target_index, contrast_weights
 
 __all__ = [
-    "ILRMA",
-    "ILRMA_SR",
-    "ILRMA_V2",
-    "ILRMA_REALTIME",
+    # Base
+    "BSSBase",
+    # Registry
+    "get_bss",
+    "list_algorithms",
+    "get_algorithm_info",
+    "register_bss",
+    # IVA
     "IVA_NG",
     "AUX_IVA_ISS",
     "AUX_IVA_ISS_ONLINE",
     "AUX_OVER_IVA",
     "AUX_OVER_IVA_ONLINE",
+    # ILRMA
+    "ILRMA",
+    "ILRMA_V2",
+    "ILRMA_SR",
+    "ILRMA_REALTIME",
+    "ILRMA_NOISY",
+    # RCSCME
     "RCSCME",
+    # Utils
     "nmf_update",
     "select_target_index",
+    "contrast_weights",
 ]

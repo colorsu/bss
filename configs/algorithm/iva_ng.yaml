@@ -1,0 +1,7 @@
+# IVA_NG algorithm configuration (Natural Gradient)
+name: IVA_NG
+params:
+  n_components: 2
+  n_iter: 200
+  learning_rate: 0.1
+  ref_mic: 1

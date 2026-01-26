@@ -1,0 +1,9 @@
+# AUX_OVER_IVA algorithm configuration (offline over-determined)
+name: AUX_OVER_IVA
+params:
+  num_targets: 1
+  n_iter: 50
+  ref_mic: 1
+  contrast_func: "power"
+  gamma: 0.05
+  proj_back_type: "scale_constraint"

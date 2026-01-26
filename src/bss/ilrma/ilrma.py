@@ -1,9 +1,13 @@
 """Independent Low-Rank Matrix Analysis (ILRMA)."""
 
 import torch
-from .utils import nmf_update
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import nmf_update
 
 
+@register_bss("ILRMA")
 class ILRMA(torch.nn.Module):
     """Independent Low-Rank Matrix Analysis for blind source separation.
 

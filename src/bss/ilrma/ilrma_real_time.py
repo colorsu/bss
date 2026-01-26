@@ -19,9 +19,13 @@ Reference:
 import torch
 import threading
 from typing import Optional, Tuple
-from .utils import nmf_update
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import nmf_update
 
 
+@register_bss("ILRMA_REALTIME")
 class ILRMA_REALTIME(torch.nn.Module):
     """Real-time dual-rate ILRMA for blind source separation.
 

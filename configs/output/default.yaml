@@ -1,0 +1,4 @@
+# Output configuration
+output_dir: "outputs"
+save_audio: true
+output_postfix: ""

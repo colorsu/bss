@@ -11,12 +11,15 @@ Reference:
 
 import torch
 
-from .utils import contrast_weights
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import contrast_weights
 
 # Debug switch: Set to True for vectorized (fast), False for loop version (debug)
 USE_VECTORIZED_UPDATE = True
 
 
+@register_bss("AUX_OVER_IVA")
 class AUX_OVER_IVA(torch.nn.Module):
     """Offline Auxiliary-function-based over-determined IVA.
 

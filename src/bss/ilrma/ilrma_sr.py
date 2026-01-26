@@ -1,11 +1,18 @@
-"""Independent Low-Rank Matrix Analysis (ILRMA) - Vectorized Version."""
+"""Independent Low-Rank Matrix Analysis with Spatial Regularization (ILRMA-SR)."""
 
 import torch
-from .utils import nmf_update
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import nmf_update
 
 
-class ILRMA_V2(torch.nn.Module):
-    """ILRMA spatially regularized vectorized/batched implementation for improved performance.
+@register_bss("ILRMA_SR")
+class ILRMA_SR(torch.nn.Module):
+    """ILRMA vectorized/batched implementation for improved performance.
+
+    This version performs frequency-wise operations in a vectorized manner
+    for better computational efficiency compared to the per-frequency loop in ILRMA.
 
     Args:
         n_components (int): Number of sources (must equal number of channels). Default: 2
@@ -24,7 +31,7 @@ class ILRMA_V2(torch.nn.Module):
         self.nmf_eps = nmf_eps
         self.ip_eps = ip_eps
 
-    def forward(self, X):
+    def forward(self, X, sv):
         # X: (M, J, I, 2) real/imag
         M, J, I, _ = X.shape
         N = self.n_components

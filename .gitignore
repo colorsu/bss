@@ -34,6 +34,9 @@ wheelhouse/
 htmlcov/
 nosetests.xml
 coverage.xml
+outputs/
+.vscode/
+__pycache__/
 
 # --- Secrets and configuration ---
 

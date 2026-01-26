@@ -1,0 +1,6 @@
+# Audio file configuration
+input_file: /Users/kolor/myWork/data/JL_FB_ANF.wav  # Path to input audio file (required)
+sample_rate: 16000
+n_channels: 3
+n_fft: 1024
+hop_length: 512

@@ -1,8 +1,16 @@
+"""RCSCME algorithm module."""
+
 import torch
-from src.bss import ILRMA_V2
-from src.bss.utils import select_target_index
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..ilrma.ilrma_v2 import ILRMA_V2
+from ..utils import select_target_index
+
 
 class RCSCME(torch.nn.Module):
+    """Rank-Constrained Spatial Covariance Matrix Estimation."""
+
     def __init__(self, n_components=2, k_NMF_bases=8, n_iter=30, sr=16000, n_fft=512):
         super(RCSCME, self).__init__()
         self.n_components = n_components

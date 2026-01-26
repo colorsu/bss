@@ -1,0 +1,6 @@
+# AUX_IVA_ISS algorithm configuration (offline)
+name: AUX_IVA_ISS
+params:
+  n_iter: 100
+  ref_mic: 1
+  contrast_func: "laplace"

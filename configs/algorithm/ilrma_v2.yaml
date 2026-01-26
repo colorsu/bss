@@ -1,0 +1,6 @@
+# ILRMA_V2 algorithm configuration (vectorized)
+name: ILRMA_V2
+params:
+  n_components: 3
+  k_NMF_bases: 16
+  n_iter: 80

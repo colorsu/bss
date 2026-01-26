@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pyroomacoustics as pra
 from src.audio import STFT, load_audio_sf, save_audio_sf
-from src.bss import ILRMA, ILRMA_V2
+from src.bss import ILRMA, ILRMA_V2, ILRMA_SR
 
 class ILRMA_GRAPH(torch.nn.Module):
     """
@@ -22,21 +22,21 @@ class ILRMA_GRAPH(torch.nn.Module):
         self.n_iter = n_iter
         self.frame_shift = frame_shift
         self.stft = STFT(win_len=frame_shift*2, shift_len=frame_shift)
-        # self.ilrma = ILRMA(n_components=n_components, k_NMF_bases=k_NMF_bases, n_iter=n_iter)
-        self.ilrma = ILRMA_V2(n_components=n_components, k_NMF_bases=k_NMF_bases, n_iter=n_iter)
+        self.ilrma = ILRMA_SR(n_components=n_components, k_NMF_bases=k_NMF_bases, n_iter=n_iter)
         print(f"Initialized ILRMA_GRAPH with n_iter={n_iter}, frame_shift={frame_shift}, n_components={n_components}, k_NMF_bases={k_NMF_bases}")
 
-    def forward(self, mix, n_src=1):
+    def forward(self, mix, sv):
         mix_spec = self.stft.transform(mix)
         print(f"Mix spectrogram shape: {mix_spec.shape}")
 
-        # mix_out_spec = self.ilrma(mix_spec)
-        # mix_out = self.stft.inverse(mix_out_spec)
+        mix_out_spec = self.ilrma(mix_spec, sv)
+        mix_out = self.stft.inverse(mix_out_spec)
 
-        in_spec = torch.view_as_complex(mix_spec).permute(1, 2, 0)
-        bf_spec = torch.einsum('TFC,FC->TF', in_spec, torch.from_numpy(sv.conj()).to(torch.complex64))
-        bf_spec = bf_spec / mix.shape[0]  # Normalize by number of channels
-        mix_out = self.stft.inverse(torch.view_as_real(bf_spec).unsqueeze(0))
+        # test steering vector beamforming
+        # in_spec = torch.view_as_complex(mix_spec).permute(1, 2, 0)
+        # bf_spec = torch.einsum('TFC,FC->TF', in_spec, torch.from_numpy(sv.conj()).to(torch.complex64))
+        # bf_spec = bf_spec / mix.shape[0]  # Normalize by number of channels
+        # mix_out = self.stft.inverse(torch.view_as_real(bf_spec).unsqueeze(0))
         return mix_out
 
 def calculate_steering_vector(mic_positions, source_angle_deg, n_fft=512, fs=16000):
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     mix = torch.from_numpy(mix.T).float()
 
     save_audio_sf("generated_mix.wav", mix, sr)
-    print(f"Steering vector: {sv}")
+    # print(f"Steering vector: {sv}")
 
     model = ILRMA_GRAPH(frame_shift=256, n_iter=100, n_components=2, k_NMF_bases=8)
 
@@ -123,5 +123,5 @@ if __name__ == "__main__":
 
     # # Need to run model again to get outp ut since profile returns dict
     with torch.no_grad():
-        mix_out = model(mix)
+        mix_out = model(mix, sv)
     save_audio_sf(out_path, mix_out, sr)

@@ -1,9 +1,13 @@
 """Auxiliary-function-based Independent Vector Analysis with Iterative Source Steering."""
 
 import torch
-from .utils import contrast_weights
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import contrast_weights
 
 
+@register_bss("AUX_IVA_ISS")
 class AUX_IVA_ISS(torch.nn.Module):
     """Auxiliary-function-based Independent Vector Analysis with Iterative Source Steering.
 

@@ -1,9 +1,12 @@
-"""Independent Low-Rank Matrix Analysis (ILRMA) - Vectorized Version."""
+"""Independent Vector Analysis with Natural Gradient (IVA-NG)."""
 
 import torch
-from .utils import nmf_update
+
+from ..base import BSSBase
+from ..registry import register_bss
 
 
+@register_bss("IVA_NG")
 class IVA_NG(torch.nn.Module):
     """IVA implement based on Natural gradient.
 

@@ -1,0 +1,11 @@
+# NoisyILRMA algorithm configuration
+# Reference: Nishida et al., "NoisyILRMA: Diffuse-Noise-Aware
+# Independent Low-Rank Matrix Analysis for Fast Blind Source Extraction"
+name: ILRMA_NOISY
+params:
+  n_components: 3
+  k_NMF_bases: 32
+  n_iter: 120
+  switch_iter: 100   # Switch from NMF to direct r update at iteration 60
+  alpha: 0.8        # Inverse-gamma prior shape parameter (small = less regularization)
+  beta: 1        # Inverse-gamma prior scale parameter (0 = ML estimation)

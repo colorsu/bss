@@ -8,12 +8,16 @@ causal, frame-by-frame manner using a forgetting factor.
 """
 
 import torch
-from .utils import contrast_weights
+
+from ..base import BSSBase
+from ..registry import register_bss
+from ..utils import contrast_weights
 
 # Debug switch: Set to True for vectorized (fast), False for loop version (debug)
 USE_VECTORIZED_ISS = True   
 
 
+@register_bss("AUX_IVA_ISS_ONLINE")
 class AUX_IVA_ISS_ONLINE(torch.nn.Module):
     """Online Auxiliary-function-based IVA with ISS.
 
